@@ -117,8 +117,7 @@ fn main() -> Result<(), String> {
     let mut ignore_next_release = false;
 
     // TODO draw rectangle around window under cursor
-    loop {
-        let ev = conn.wait_for_event().unwrap();
+    while let Some(ev) = conn.wait_for_event() {
         match ev.response_type() {
             xcb::BUTTON_PRESS => {
                 let button_press: &xcb::ButtonPressEvent = unsafe { xcb::cast_event(&ev) };
