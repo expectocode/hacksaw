@@ -3,13 +3,13 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "hacksaw", max_term_width = 80)]
-pub struct Opt {
+pub(crate) struct Opt {
     #[structopt(
         short = "n",
         long = "no-guides",
         help = "Disable fighter pilot guide lines"
     )]
-    pub no_guides: bool,
+    pub(crate) no_guides: bool,
 
     #[structopt(
         short = "g",
@@ -17,7 +17,7 @@ pub struct Opt {
         default_value = "1",
         help = "Thickness of fighter pilot guide lines"
     )]
-    pub guide_thickness: u16,
+    pub(crate) guide_thickness: u16,
 
     #[structopt(
         short = "s",
@@ -25,7 +25,7 @@ pub struct Opt {
         default_value = "1",
         help = "Thickness of selection box lines"
     )]
-    pub select_thickness: u16,
+    pub(crate) select_thickness: u16,
 
     #[structopt(
         short = "c",
@@ -34,7 +34,7 @@ pub struct Opt {
         parse(try_from_str = parse_hex),
         help = "Hex colour of the lines (RGB or RGBA), '#' optional"
     )]
-    pub line_colour: u32,
+    pub(crate) line_colour: u32,
 
     #[structopt(
         short = "f",
@@ -53,7 +53,7 @@ Output format. You can use:
       %% for a literal '%'.
 Other %-codes will cause an error."
     )]
-    pub format: Format,
+    pub(crate) format: Format,
 
     #[structopt(
         short = "r",
@@ -61,7 +61,7 @@ Other %-codes will cause an error."
         default_value = "0",
         help = "Number of (nested) window manager frames to try and remove"
     )]
-    pub remove_decorations: u32,
+    pub(crate) remove_decorations: u32,
 }
 
 #[derive(Debug)]

@@ -35,7 +35,7 @@ fn main() -> Result<(), String> {
     let line_width = opt.select_thickness;
     let guide_width = opt.guide_thickness;
     let line_colour = opt.line_colour;
-    let format = opt.format.0;
+    let format = opt.format;
 
     let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
     let setup = conn.get_setup();

@@ -1,15 +1,5 @@
-extern crate nom;
-
-use self::nom::{
-    branch::alt,
-    bytes::complete::{is_not, tag},
-    combinator::{complete, map},
-    multi::many0,
-    sequence::preceded,
-    IResult,
-};
-
-#[derive(Debug)]
+/// Token to determine how the output is formatted.
+#[derive(Debug, PartialEq)]
 pub enum FormatToken {
     WindowId,
     Geometry,
@@ -20,45 +10,69 @@ pub enum FormatToken {
     Literal(String),
 }
 
-// This newtype is needed to sidestep StructOpt's Vec behaviour
-#[derive(Debug)]
-pub struct Format(pub Vec<FormatToken>);
+// Get around structopt automatic Vec handling.
+pub(crate) type Format = Vec<FormatToken>;
 
-pub fn parse_format_string(input: &str) -> Result<Format, String> {
-    match parse_all(input) {
-        Ok(("", v)) => Ok(Format(v)),
-        Err(s) => Err(format!("Format string parse error: {:?}", s)),
-        Ok((s, _)) => Err(format!("Format string parse error near \"{}\"", s)),
+pub(crate) fn parse_format_string(input: &str) -> Result<Format, String> {
+    let mut tokens = Vec::new();
+    let mut input = input.as_bytes();
+
+    loop {
+        let (token, rest) = match input {
+            [b'%', b'i', rest @ ..] => (FormatToken::WindowId, rest),
+            [b'%', b'g', rest @ ..] => (FormatToken::Geometry, rest),
+            [b'%', b'w', rest @ ..] => (FormatToken::Width, rest),
+            [b'%', b'h', rest @ ..] => (FormatToken::Height, rest),
+            [b'%', b'x', rest @ ..] => (FormatToken::X, rest),
+            [b'%', b'y', rest @ ..] => (FormatToken::Y, rest),
+            [b'%', b'%', rest @ ..] => (FormatToken::Literal("%".to_owned()), rest),
+            [b'%', c, ..] => break Err(format!("Unknown format '%{}'", char::from(*c))),
+            [b'%'] => break Err("Incorrectly terminated %".to_owned()),
+            [_, ..] => {
+                let next_perc = input.iter().position(|&c| c == b'%');
+                let (literal, rest) = input.split_at(next_perc.unwrap_or_else(|| input.len()));
+                let literal = FormatToken::Literal(String::from_utf8_lossy(literal).into_owned());
+                (literal, rest)
+            }
+            [] => break Ok(tokens),
+        };
+
+        tokens.push(token);
+        input = rest;
     }
 }
 
-fn parse_format(input: &str) -> IResult<&str, FormatToken> {
-    preceded(
-        tag("%"),
-        alt((
-            map(tag("i"), |_| FormatToken::WindowId),
-            map(tag("g"), |_| FormatToken::Geometry),
-            map(tag("w"), |_| FormatToken::Width),
-            map(tag("h"), |_| FormatToken::Height),
-            map(tag("x"), |_| FormatToken::X),
-            map(tag("y"), |_| FormatToken::Y),
-            map(tag("%"), |_| FormatToken::Literal("%".to_owned())),
-        )),
-    )(input)
-}
+#[test]
+fn test_parse_format_string() {
+    assert_eq!(
+        parse_format_string("%wx%h+%x+%y"),
+        Ok(vec![
+            FormatToken::Width,
+            FormatToken::Literal("x".into()),
+            FormatToken::Height,
+            FormatToken::Literal("+".into()),
+            FormatToken::X,
+            FormatToken::Literal("+".into()),
+            FormatToken::Y,
+        ])
+    );
 
-fn parse_literal(input: &str) -> IResult<&str, FormatToken> {
-    // Parse a literal by taking the entire string until a % sign and wrapping
-    // it in a FormatToken::Literal.
-    map(is_not("%"), |s: &str| FormatToken::Literal(s.to_owned()))(input)
-}
+    assert_eq!(
+        parse_format_string("%%h"),
+        Ok(vec![
+            FormatToken::Literal("%".into()),
+            FormatToken::Literal("h".into())
+        ])
+    );
 
-fn parse_anything(input: &str) -> IResult<&str, FormatToken> {
-    // Parse a single token - either a %-token or a literal.
-    alt((parse_format, parse_literal))(input)
-}
+    assert_eq!(parse_format_string("%g"), Ok(vec![FormatToken::Geometry]));
 
-fn parse_all(input: &str) -> IResult<&str, Vec<FormatToken>> {
-    // Parse as many individual tokens as we can, using the entire string.
-    complete(many0(parse_anything))(input)
+    assert_eq!(parse_format_string("%-"), Err("Unknown format %-".into()));
+
+    assert_eq!(parse_format_string(""), Ok(vec![]));
+
+    assert_eq!(
+        parse_format_string("hello world"),
+        Ok(vec![FormatToken::Literal("hello world".into())])
+    );
 }

@@ -12,7 +12,6 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3"
-nom = "5.0.0"
 
 [dependencies.xcb]
 version = "0.8.2"
