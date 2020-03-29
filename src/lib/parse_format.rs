@@ -27,7 +27,7 @@ pub(crate) fn parse_format_string(input: &str) -> Result<Format, String> {
             [b'%', b'y', rest @ ..] => (FormatToken::Y, rest),
             [b'%', b'%', rest @ ..] => (FormatToken::Literal("%".to_owned()), rest),
             [b'%', c, ..] => break Err(format!("Unknown format '%{}'", *c as char)),
-            [b'%'] => break Err("Incorrectly terminated %".to_owned()),
+            [b'%'] => break Err("Incorrectly terminated '%'".to_owned()),
             [_, ..] => {
                 let next_perc = input.iter().position(|&c| c == b'%');
                 let (literal, rest) = input.split_at(next_perc.unwrap_or_else(|| input.len()));
@@ -67,7 +67,8 @@ fn test_parse_format_string() {
 
     assert_eq!(parse_format_string("%g"), Ok(vec![FormatToken::Geometry]));
 
-    assert_eq!(parse_format_string("%-"), Err("Unknown format '%-'".into()));
+    assert!(parse_format_string("%-").is_err());
+    assert!(parse_format_string("%-").unwrap_err().contains("'%-'"));
 
     assert_eq!(parse_format_string(""), Ok(vec![]));
 
