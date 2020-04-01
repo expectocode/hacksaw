@@ -14,5 +14,5 @@ edition = "2018"
 structopt = "0.3"
 
 [dependencies.xcb]
-version = "0.8.2"
+version = "0.9"
 features = ["xkb", "shape"]
